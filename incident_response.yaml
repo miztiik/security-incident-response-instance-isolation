@@ -45,7 +45,7 @@ Resources:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 3
+      Timeout: 15
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -64,7 +64,7 @@ Resources:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 3
+      Timeout: 60
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -75,10 +75,9 @@ Resources:
     DependsOn: StatesExecutionRole
     Properties:
       StateMachineName: !Sub 'incidentResponseStepFunction${FunctionNameSuffix}'
-      # RoleArn: !GetAtt [ LambdaExecutionRole, Arn ]
       RoleArn:
         Fn::GetAtt:
-        - LambdaExecutionRole
+        - StatesExecutionRole
         - Arn
       DefinitionString: !Sub |
         {
@@ -169,6 +168,10 @@ Resources:
                   - "ec2:CreateTags"
                   - "ec2:StopInstances"
                   - "ec2:CreateVolume"
+                  - "ec2:CreateSnapshots"
+                  - "ec2:CreateSnapshot"
+                  - "ec2:DescribeSnapshots"
+                  - "ec2:ModifyInstanceAttribute"
                 Resource: '*'
         Roles: 
           - Ref: "LambdaExecutionRole"
