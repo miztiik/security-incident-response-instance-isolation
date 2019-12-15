@@ -68,7 +68,8 @@ def create_instance_snapshot( inst_id ):
     return SnapShotDetails['SnapshotId']
 
 def lambda_handler(event, context):
-    inst_id = event.get('instanceID')
+    logger.info(f"Event:{event}")
+    inst_id = event.get('instanceId')
     if not inst_id:
         inst_id ="i-08e8f2947d47af658"
     resp = create_instance_snapshot( inst_id )

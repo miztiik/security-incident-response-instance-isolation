@@ -99,6 +99,7 @@ def quarantine_ec2_instance(inst_id, quarantine_sg_id):
         if responseCode >= 400:
             logger.info(f"Unable to modify instance security group")
             logger.info(f"ERROR:{str(result)}")
+            resp['error_message'] = str(result)
         else:
             logger.info(f"Instance:{inst_id} quarantined with sg:{quarantine_sg_id}")
             resp['status'] = True
@@ -111,7 +112,8 @@ def quarantine_ec2_instance(inst_id, quarantine_sg_id):
     return resp
 
 def lambda_handler(event, context):
-    inst_id = event.get('instanceID')
+    logger.info(f"Event:{event}")
+    inst_id = event.get('instanceId')
     if not inst_id:
         inst_id="i-08e8f2947d47af658"
     quarantine_sg_id = get_qurantine_sg_id(inst_id)
@@ -120,3 +122,6 @@ def lambda_handler(event, context):
 
 if __name__ == '__main__':
     lambda_handler(None, None)
+
+# Sample Event
+# {"instanceId": "i-00ae0fc59fa711181"}
