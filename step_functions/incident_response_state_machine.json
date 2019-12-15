@@ -1,0 +1,52 @@
+{
+  "Comment": "Isolate compromised EC2 Instance & Snapshot for Investigation",
+  "StartAt": "ec2IncidentResponse",
+  "States": {
+    "ec2IncidentResponse": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "ec2InstanceSnapshot",
+          "States": {
+            "ec2InstanceSnapshot": {
+              "Type": "Task",
+              "Resource": "${ec2InstanceSnapshotFn.Arn}",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "ec2InstanceQuarantineFn",
+          "States": {
+            "ec2InstanceQuarantineFn": {
+              "Type": "Task",
+              "Resource": "${ec2InstanceQuarantineFn.Arn}",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

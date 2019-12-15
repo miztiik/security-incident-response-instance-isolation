@@ -1,0 +1,203 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: "Miztiik Incident Response Template"
+
+Parameters:
+  enableDEBUGGER:
+    Description: Do you want to enable logging.
+    Default: "False"
+    Type: String
+    AllowedValues: ["True", "False"]
+    ConstraintDescription: Must be boolean.
+
+  FunctionNameSuffix:
+    Description: 'Suffix to append to the Lambda functions.'
+    Type: 'String'
+    Default: '-Miztiik-InfoSec'
+
+Globals:
+  Function:
+    Runtime: python3.7
+    Timeout: 10
+    Tracing: Active
+    MemorySize: 128
+    Environment:
+      Variables:
+        DEBUG_MODE:
+          Ref: enableDEBUGGER
+    Tags:
+      Organisation: Miztiik-InfoSec
+
+Resources:
+
+  ec2InstanceQuarantineFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: 'Attaches the instance a SG with no rules so it cannott communicate with the outside world'
+      FunctionName: !Sub 'ec2InstanceQuarantineFn${FunctionNameSuffix}'
+      Handler: ec2_instance_quarantine.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./lambda_src/ec2_instance_quarantine.py
+      Environment:
+        Variables:
+          ENABLE_DEBUG:
+            Ref: enableDEBUGGER
+      MemorySize: 128
+      Timeout: 3
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+
+  ec2InstanceSnapshotFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: 'Takes a snapshot of the given instance ID'
+      FunctionName: !Sub 'ec2InstanceSnapshotFn${FunctionNameSuffix}'
+      Handler: ec2_instance_snapshot.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./lambda_src/ec2_instance_snapshot.py
+      Environment:
+        Variables:
+          ENABLE_DEBUG:
+            Ref: enableDEBUGGER
+      MemorySize: 128
+      Timeout: 3
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+
+  incidentResponseStepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn: StatesExecutionRole
+    Properties:
+      StateMachineName: !Sub 'incidentResponseStepFunction${FunctionNameSuffix}'
+      # RoleArn: !GetAtt [ LambdaExecutionRole, Arn ]
+      RoleArn:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "Isolate compromised EC2 Instance & Snapshot for Investigation",
+          "StartAt": "ec2IncidentResponse",
+          "States": {
+            "ec2IncidentResponse": {
+              "Type": "Parallel",
+              "End": true,
+              "Branches": [
+                {
+                  "StartAt": "ec2InstanceSnapshot",
+                  "States": {
+                    "ec2InstanceSnapshot": {
+                      "Type": "Task",
+                      "Resource": "${ec2InstanceSnapshotFn.Arn}",
+                      "End": true,
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "States.ALL"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "StartAt": "ec2InstanceQuarantineFn",
+                  "States": {
+                    "ec2InstanceQuarantineFn": {
+                      "Type": "Task",
+                      "Resource": "${ec2InstanceQuarantineFn.Arn}",
+                      "End": true,
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "States.ALL"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+            - states.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSLambdaExecute"
+        - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
+
+  LambdaExecutionRoleAddonPolicies: 
+    Type: "AWS::IAM::Policy"
+    Properties: 
+        PolicyName: IncidentResponseInfoSecPolicy
+        PolicyDocument: 
+            Statement: 
+              - Sid: "SecurityGroupPolicy"
+                Effect: "Allow"
+                Action: 
+                  - "ec2:RevokeSecurityGroupIngress"
+                  - "ec2:DescribeSecurityGroupReferences"
+                  - "ec2:RevokeSecurityGroupEgress"
+                  - "ec2:ApplySecurityGroupsToClientVpnTargetNetwork"
+                  - "ec2:DescribeSecurityGroups"
+                  - "ec2:DescribeInstances"
+                  - "ec2:CreateTags"
+                  - "ec2:StopInstances"
+                  - "ec2:CreateVolume"
+                Resource: '*'
+        Roles: 
+          - Ref: "LambdaExecutionRole"
+
+  StatesExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: StatesExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: 
+                  Fn::GetAtt:
+                  - ec2InstanceQuarantineFn
+                  - Arn
+                  Fn::GetAtt:
+                  - ec2InstanceSnapshotFn
+                  - Arn
+
