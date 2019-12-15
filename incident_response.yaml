@@ -197,10 +197,12 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource: 
-                  Fn::GetAtt:
-                  - ec2InstanceQuarantineFn
-                  - Arn
-                  Fn::GetAtt:
-                  - ec2InstanceSnapshotFn
-                  - Arn
+                  - Fn::GetAtt: [ ec2InstanceQuarantineFn, Arn ]
+                  - Fn::GetAtt: [ ec2InstanceSnapshotFn, Arn ]
+                  # - Fn::GetAtt:
+                  #   - ec2InstanceQuarantineFn
+                  #   - Arn
+                  # - Fn::GetAtt:
+                  #   - ec2InstanceSnapshotFn
+                  #   - Arn
 

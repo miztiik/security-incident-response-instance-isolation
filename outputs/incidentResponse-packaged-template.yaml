@@ -36,13 +36,13 @@ Resources:
         Fn::Sub: ec2InstanceQuarantineFn${FunctionNameSuffix}
       Handler: ec2_instance_quarantine.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/48d7f20b8cff85d8e9cdc6e2946a8549
+      CodeUri: s3://sam-templates-011/15c49ac71970af2f8479003d302ba805
       Environment:
         Variables:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 3
+      Timeout: 15
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -55,13 +55,13 @@ Resources:
         Fn::Sub: ec2InstanceSnapshotFn${FunctionNameSuffix}
       Handler: ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/2f405cd15dab6ed10f0d4bf68aa7ac59
+      CodeUri: s3://sam-templates-011/69bf1f05de501a80c4c813d57e708511
       Environment:
         Variables:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 3
+      Timeout: 60
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -74,7 +74,7 @@ Resources:
         Fn::Sub: incidentResponseStepFunction${FunctionNameSuffix}
       RoleArn:
         Fn::GetAtt:
-        - LambdaExecutionRole
+        - StatesExecutionRole
         - Arn
       DefinitionString:
         Fn::Sub: "{\n  \"Comment\": \"Isolate compromised EC2 Instance & Snapshot\
@@ -131,6 +131,10 @@ Resources:
           - ec2:CreateTags
           - ec2:StopInstances
           - ec2:CreateVolume
+          - ec2:CreateSnapshots
+          - ec2:CreateSnapshot
+          - ec2:DescribeSnapshots
+          - ec2:ModifyInstanceAttribute
           Resource: '*'
       Roles:
       - Ref: LambdaExecutionRole
@@ -155,6 +159,9 @@ Resources:
             Action:
             - lambda:InvokeFunction
             Resource:
-              Fn::GetAtt:
+            - Fn::GetAtt:
+              - ec2InstanceQuarantineFn
+              - Arn
+            - Fn::GetAtt:
               - ec2InstanceSnapshotFn
               - Arn
