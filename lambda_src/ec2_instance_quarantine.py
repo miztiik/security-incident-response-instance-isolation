@@ -88,7 +88,7 @@ def get_qurantine_sg_id(inst_id):
 
 def quarantine_ec2_instance(inst_id, quarantine_sg_id):
 
-    resp = {'status': False, 'instances_quarantined': [] }
+    resp = {'status': False, 'message': [] }
 
     ec2_resource = boto3.resource('ec2')
 
@@ -103,21 +103,28 @@ def quarantine_ec2_instance(inst_id, quarantine_sg_id):
         else:
             logger.info(f"Instance:{inst_id} quarantined with sg:{quarantine_sg_id}")
             resp['status'] = True
-            resp['instances_quarantined'].append(inst_id )
-
+            resp['message'].append( {'instance_id':inst_id, 'qurantined':True} )
     except ClientError as e:
         logger.info(f"Unable to modify instance security group")
         logger.info(f"ERROR: {str(e)}")
-
+        resp['message'].append( {'instance_id':inst_id, 'qurantined':False, 'error_message':str(e)} )
     return resp
 
 def lambda_handler(event, context):
     logger.info(f"Event:{event}")
-    inst_id = event.get('instanceId')
-    if not inst_id:
-        inst_id="i-08e8f2947d47af658"
-    quarantine_sg_id = get_qurantine_sg_id(inst_id)
-    resp = quarantine_ec2_instance(inst_id, quarantine_sg_id)
+    resp = {'status':False}
+    GUARDDUTY_FINDING_TYPE="UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration"
+    if 'detail' in event:
+        if event.get('detail').get('type') == GUARDDUTY_FINDING_TYPE:
+            principal_id = event.get('detail').get('resource').get('accessKeyDetails').get('principalId')
+            role_name = event.get('detail').get('resource').get('accessKeyDetails').get('userName')
+            if principal_id:
+                inst_id = principal_id.split(":")[1]
+                if inst_id:
+                    logger.info(f"Going to qurantine Instance :{inst_id}")
+                    quarantine_sg_id = get_qurantine_sg_id(inst_id)
+                    resp = quarantine_ec2_instance(inst_id, quarantine_sg_id)
+
     return resp
 
 if __name__ == '__main__':

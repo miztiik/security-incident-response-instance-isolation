@@ -64,7 +64,7 @@ Resources:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 60
+      Timeout: 180
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -199,10 +199,48 @@ Resources:
                 Resource: 
                   - Fn::GetAtt: [ ec2InstanceQuarantineFn, Arn ]
                   - Fn::GetAtt: [ ec2InstanceSnapshotFn, Arn ]
-                  # - Fn::GetAtt:
-                  #   - ec2InstanceQuarantineFn
-                  #   - Arn
-                  # - Fn::GetAtt:
-                  #   - ec2InstanceSnapshotFn
-                  #   - Arn
 
+  CloudWatchEventRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: "Rule to invoke state machine on GuardDuty Finding"
+      EventPattern:
+        source:
+          - "aws.guardduty"
+        detail:
+          type:
+          - "UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration"
+      Name: "Trigger_Qurantine_Ops"
+      State: "ENABLED"
+      Targets:
+        -
+          Arn: !Ref incidentResponseStepFunction
+          Id: trigger_qurantine_ops_target
+          RoleArn: !GetAtt CwExecuteStateMachineRole.Arn
+
+  CwExecuteStateMachineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Sid: "AllowCWEServiceToAssumeRole"
+              Effect: "Allow"
+              Action:
+                - "sts:AssumeRole"
+              Principal:
+                Service:
+                  - "events.amazonaws.com"
+        Path: "/"
+        Policies:
+          -
+            PolicyName: "ExecuteStateMachine"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                -
+                  Effect: "Allow"
+                  Action:
+                    - "states:StartExecution"
+                  Resource: !Ref incidentResponseStepFunction

@@ -21,6 +21,7 @@ logging.basicConfig(
 logger.setLevel(os.getenv('log_level', logging.INFO))
 
 def create_instance_snapshot( inst_id ):
+    resp = {'status': False, 'message': [] }
     client = boto3.client('ec2')
     response = client.describe_instances(
         InstanceIds=[
@@ -64,15 +65,28 @@ def create_instance_snapshot( inst_id ):
             SnapShotDetails['SnapshotId'],
         ]
     )
-
-    return SnapShotDetails['SnapshotId']
+    resp['status'] = True
+    resp['message'].append( {'instance_id':inst_id, 
+                                'snapshot_successful':True, 
+                                'snapshot_id':SnapShotDetails['SnapshotId']
+                                }
+                        )
+    return resp
 
 def lambda_handler(event, context):
     logger.info(f"Event:{event}")
-    inst_id = event.get('instanceId')
-    if not inst_id:
-        inst_id ="i-08e8f2947d47af658"
-    resp = create_instance_snapshot( inst_id )
+    resp = {'status':False}
+    GUARDDUTY_FINDING_TYPE="UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration"
+    if 'detail' in event:
+        if event.get('detail').get('type') == GUARDDUTY_FINDING_TYPE:
+            principal_id = event.get('detail').get('resource').get('accessKeyDetails').get('principalId')
+            role_name = event.get('detail').get('resource').get('accessKeyDetails').get('userName')
+
+        if principal_id:
+            inst_id = principal_id.split(":")[1]
+            if inst_id:
+                logger.info(f"Going to snapshot qurantine Instance :{inst_id}")
+                resp = create_instance_snapshot(inst_id)
     return resp
 
 if __name__ == '__main__':

@@ -1,0 +1,95 @@
+{
+  "id": "96c598dc-1656-43d9-0329-3460544c6660",
+  "region": "us-east-1",
+  "version": "0",
+  "detail-type": "GuardDuty Finding",
+  "source": "aws.guardduty",
+  "account": "313487964768",
+  "time": "2019-12-18T00:15:16Z",
+  "resources": [],
+  "detail": {
+    "schemaVersion": "2.0",
+    "accountId": "313487964768",
+    "region": "us-east-1",
+    "partition": "aws",
+    "id": "d6b78b2ce41b88769ae6ca1aefd1ae61",
+    "arn": "arn:aws:guardduty:us-east-1:313487964768:detector/2cb78590418255593d6c7842d3d448e5/finding/d6b78b2ce41b88769ae6ca1aefd1ae61",
+    "type": "UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration",
+    "resource": {
+      "resourceType": "AccessKey",
+      "accessKeyDetails": {
+        "accessKeyId": "GeneratedFindingAccessKeyId",
+        "principalId": "GeneratedFindingPrincipalId:i-00ae0fc59fa711181",
+        "userType": "IAMUser",
+        "userName": "GeneratedFindingUserName"
+      }
+    },
+    "service": {
+      "serviceName": "guardduty",
+      "detectorId": "2cb78590418255593d6c7842d3d448e5",
+      "action": {
+        "actionType": "AWS_API_CALL",
+        "awsApiCallAction": {
+          "api": "GeneratedFindingAPIName",
+          "serviceName": "GeneratedFindingAPIServiceName",
+          "callerType": "Remote IP",
+          "remoteIpDetails": {
+            "ipAddressV4": "198.51.100.0",
+            "organization": {
+              "asn": "-1",
+              "asnOrg": "GeneratedFindingASNOrg",
+              "isp": "GeneratedFindingISP",
+              "org": "GeneratedFindingORG"
+            },
+            "country": {
+              "countryName": "GeneratedFindingCountryName"
+            },
+            "city": {
+              "cityName": "GeneratedFindingCityName"
+            },
+            "geoLocation": {
+              "lat": 0,
+              "lon": 0
+            }
+          },
+          "affectedResources": {}
+        }
+      },
+      "resourceRole": "TARGET",
+      "additionalInfo": {
+        "sample": "True",
+        "recentCredentials": [
+          {
+            "accessKeyId": "GeneratedFindingAccessKeyId1",
+            "principalId": "GeneratedFindingPrincipalId1",
+            "ipAddressV4": "198.51.100.1"
+          },
+          {
+            "accessKeyId": "GeneratedFindingAccessKeyId2",
+            "principalId": "GeneratedFindingPrincipalId2",
+            "ipAddressV4": "198.51.100.1"
+          },
+          {
+            "accessKeyId": "GeneratedFindingAccessKeyId3",
+            "principalId": "GeneratedFindingPrincipalId3",
+            "ipAddressV4": "198.51.100.1"
+          },
+          {
+            "accessKeyId": "GeneratedFindingAccessKeyId4",
+            "principalId": "GeneratedFindingPrincipalId4",
+            "ipAddressV4": "198.51.100.1"
+          }
+        ]
+      },
+      "eventFirstSeen": "2019-12-18T00:13:00.343Z",
+      "eventLastSeen": "2019-12-18T00:13:00.343Z",
+      "archived": "False",
+      "count": 1
+    },
+    "severity": 8,
+    "createdAt": "2019-12-18T00:13:00.343Z",
+    "updatedAt": "2019-12-18T00:13:00.343Z",
+    "title": "Credentials for instance role GeneratedFindingUserName used from external IP address.",
+    "description": "Credentials created exclusively for an EC2 instance using instance role GeneratedFindingUserName have been used from external IP address 198.51.100.0."
+  }
+}

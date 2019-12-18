@@ -36,7 +36,7 @@ Resources:
         Fn::Sub: ec2InstanceQuarantineFn${FunctionNameSuffix}
       Handler: ec2_instance_quarantine.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/15c49ac71970af2f8479003d302ba805
+      CodeUri: s3://sam-templates-011/59b3b6a005801fdbe53f9296ad1b4a4a
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -55,13 +55,13 @@ Resources:
         Fn::Sub: ec2InstanceSnapshotFn${FunctionNameSuffix}
       Handler: ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/69bf1f05de501a80c4c813d57e708511
+      CodeUri: s3://sam-templates-011/5fe6ff91f3d96c7369b79a575e1a2dae
       Environment:
         Variables:
           ENABLE_DEBUG:
             Ref: enableDEBUGGER
       MemorySize: 128
-      Timeout: 60
+      Timeout: 180
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
@@ -165,3 +165,47 @@ Resources:
             - Fn::GetAtt:
               - ec2InstanceSnapshotFn
               - Arn
+  CloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Rule to invoke state machine on GuardDuty Finding
+      EventPattern:
+        source:
+        - aws.guardduty
+        detail:
+          type:
+          - UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration
+      Name: Trigger_Qurantine_Ops
+      State: ENABLED
+      Targets:
+      - Arn:
+          Ref: incidentResponseStepFunction
+        Id: trigger_qurantine_ops_target
+        RoleArn:
+          Fn::GetAtt:
+          - CwExecuteStateMachineRole
+          - Arn
+  CwExecuteStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: AllowCWEServiceToAssumeRole
+          Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - events.amazonaws.com
+      Path: /
+      Policies:
+      - PolicyName: ExecuteStateMachine
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - states:StartExecution
+            Resource:
+              Ref: incidentResponseStepFunction
