@@ -10,6 +10,11 @@ Parameters:
     - 'True'
     - 'False'
     ConstraintDescription: Must be boolean.
+  SecurityContactEmail:
+    Description: Email address to receive notifications. Must be a valid email address.
+    Default: youremail@example.com
+    Type: String
+    AllowedPattern: ^(?:[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$
   FunctionNameSuffix:
     Description: Suffix to append to the Lambda functions.
     Type: String
@@ -36,7 +41,7 @@ Resources:
         Fn::Sub: ec2InstanceQuarantineFn${FunctionNameSuffix}
       Handler: ec2_instance_quarantine.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/59b3b6a005801fdbe53f9296ad1b4a4a
+      CodeUri: s3://sam-templates-011/448d7595e4411b993c1f417af28518aa
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -55,7 +60,7 @@ Resources:
         Fn::Sub: ec2InstanceSnapshotFn${FunctionNameSuffix}
       Handler: ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/5fe6ff91f3d96c7369b79a575e1a2dae
+      CodeUri: s3://sam-templates-011/b436d8afc81d6bc12ad78d95cb656d23
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -209,3 +214,27 @@ Resources:
             - states:StartExecution
             Resource:
               Ref: incidentResponseStepFunction
+  GuardDutySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: GDSNS
+      Subscription:
+      - Endpoint:
+          Ref: SecurityContactEmail
+        Protocol: email
+  GuardDutySNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: ID-GD-Topic-Policy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: SID-GD-Example
+          Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource:
+            Ref: GuardDutySNSTopic
+      Topics:
+      - Ref: GuardDutySNSTopic

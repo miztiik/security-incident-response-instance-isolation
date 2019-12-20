@@ -12,6 +12,12 @@ Parameters:
     AllowedValues: ["True", "False"]
     ConstraintDescription: Must be boolean.
 
+  SecurityContactEmail:
+    Description: Email address to receive notifications. Must be a valid email address.
+    Default: "youremail@example.com"
+    Type: String
+    AllowedPattern: ^(?:[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$
+
   FunctionNameSuffix:
     Description: 'Suffix to append to the Lambda functions.'
     Type: 'String'
@@ -164,6 +170,7 @@ Resources:
                   - "ec2:RevokeSecurityGroupEgress"
                   - "ec2:ApplySecurityGroupsToClientVpnTargetNetwork"
                   - "ec2:DescribeSecurityGroups"
+                  - "ec2:CreateSecurityGroup"
                   - "ec2:DescribeInstances"
                   - "ec2:CreateTags"
                   - "ec2:StopInstances"
@@ -244,3 +251,28 @@ Resources:
                   Action:
                     - "states:StartExecution"
                   Resource: !Ref incidentResponseStepFunction
+
+  # Findings SNS Topic
+  GuardDutySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 'GDSNS'
+      Subscription:
+        -
+          Endpoint: !Ref SecurityContactEmail
+          Protocol: "email"
+  GuardDutySNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: ID-GD-Topic-Policy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: SID-GD-Example
+          Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref GuardDutySNSTopic
+      Topics:
+      - !Ref GuardDutySNSTopic
