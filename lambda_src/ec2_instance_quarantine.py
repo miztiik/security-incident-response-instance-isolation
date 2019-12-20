@@ -83,6 +83,7 @@ def get_qurantine_sg_id(inst_id):
     except ClientError as e:
         logger.info(f"Unable to find or create quarantine security group")
         logger.info(f"ERROR: {str(e)}")
+        exit
 
     return quarantine_sg_id
 
@@ -103,11 +104,11 @@ def quarantine_ec2_instance(inst_id, quarantine_sg_id):
         else:
             logger.info(f"Instance:{inst_id} quarantined with sg:{quarantine_sg_id}")
             resp['status'] = True
-            resp['message'].append( {'instance_id':inst_id, 'qurantined':True} )
+            resp['message'].append( {'instance_id':inst_id, 'qurantine_sg_added':True} )
     except ClientError as e:
         logger.info(f"Unable to modify instance security group")
         logger.info(f"ERROR: {str(e)}")
-        resp['message'].append( {'instance_id':inst_id, 'qurantined':False, 'error_message':str(e)} )
+        resp['message'].append( {'instance_id':inst_id, 'qurantine_sg_added':False, 'error_message':str(e)} )
     return resp
 
 def lambda_handler(event, context):
@@ -124,7 +125,6 @@ def lambda_handler(event, context):
                     logger.info(f"Going to qurantine Instance :{inst_id}")
                     quarantine_sg_id = get_qurantine_sg_id(inst_id)
                     resp = quarantine_ec2_instance(inst_id, quarantine_sg_id)
-
     return resp
 
 if __name__ == '__main__':
