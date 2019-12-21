@@ -38,14 +38,14 @@ Globals:
 
 Resources:
 
-  ec2InstanceQuarantineFn:
+  qurantineEc2InstanceFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: 'Attaches the instance a SG with no rules so it cannott communicate with the outside world'
-      FunctionName: !Sub 'ec2InstanceQuarantineFn${FunctionNameSuffix}'
-      Handler: ec2_instance_quarantine.lambda_handler
+      FunctionName: !Sub 'quarantine_ec2_instance_fn${FunctionNameSuffix}'
+      Handler: quarantine_ec2_instance.lambda_handler
       Runtime: python3.7
-      CodeUri: ./lambda_src/ec2_instance_quarantine.py
+      CodeUri: ./lambda_src/quarantine_ec2_instance.py
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -57,14 +57,15 @@ Resources:
         - LambdaExecutionRole
         - Arn
 
-  ec2InstanceSnapshotFn:
+
+  quarantineEc2InstanceSnapshotFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: 'Takes a snapshot of the given instance ID'
-      FunctionName: !Sub 'ec2InstanceSnapshotFn${FunctionNameSuffix}'
-      Handler: ec2_instance_snapshot.lambda_handler
+      FunctionName: !Sub 'quarantine_ec2_instance_snapshot_fn${FunctionNameSuffix}'
+      Handler: quarantine_ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: ./lambda_src/ec2_instance_snapshot.py
+      CodeUri: ./lambda_src/quarantine_ec2_instance_snapshot.py
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -76,11 +77,32 @@ Resources:
         - LambdaExecutionRole
         - Arn
 
-  incidentResponseStepFunction:
+
+  quarantineIamRoleFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: 'Attaches a DENY ALL Permission to given IAM Role Name'
+      FunctionName: !Sub 'quarantine_iam_role_fn${FunctionNameSuffix}'
+      Handler: quarantine_iam_role.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./lambda_src/quarantine_iam_role.py
+      Environment:
+        Variables:
+          ENABLE_DEBUG:
+            Ref: enableDEBUGGER
+      MemorySize: 128
+      Timeout: 60
+      Role:
+        Fn::GetAtt:
+        - iamRoleQurantineExecutionRole
+        - Arn
+
+
+  incidentResponseStateMachine:
     Type: AWS::StepFunctions::StateMachine
     DependsOn: StatesExecutionRole
     Properties:
-      StateMachineName: !Sub 'incidentResponseStepFunction${FunctionNameSuffix}'
+      StateMachineName: !Sub 'incidentResponseStateMachine${FunctionNameSuffix}'
       RoleArn:
         Fn::GetAtt:
         - StatesExecutionRole
@@ -92,14 +114,17 @@ Resources:
           "States": {
             "ec2IncidentResponse": {
               "Type": "Parallel",
-              "End": true,
+              "Next":"result",
               "Branches": [
                 {
-                  "StartAt": "ec2InstanceSnapshot",
+                  "StartAt": "quarantineEc2InstanceSnapshot",
                   "States": {
-                    "ec2InstanceSnapshot": {
+                    "quarantineEc2InstanceSnapshot": {
                       "Type": "Task",
-                      "Resource": "${ec2InstanceSnapshotFn.Arn}",
+                      "Resource": "${quarantineEc2InstanceSnapshotFn.Arn}",
+                      "InputPath": "$",
+                      "ResultPath": "$",
+                      "OutputPath": "$",
                       "End": true,
                       "Retry": [
                         {
@@ -115,11 +140,37 @@ Resources:
                   }
                 },
                 {
-                  "StartAt": "ec2InstanceQuarantineFn",
+                  "StartAt": "quarantineEc2Instance",
                   "States": {
-                    "ec2InstanceQuarantineFn": {
+                    "quarantineEc2Instance": {
                       "Type": "Task",
-                      "Resource": "${ec2InstanceQuarantineFn.Arn}",
+                      "Resource": "${qurantineEc2InstanceFn.Arn}",
+                      "InputPath": "$",
+                      "ResultPath": "$",
+                      "OutputPath": "$",
+                      "End": true,
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "States.ALL"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "StartAt": "quarantineIamRole",
+                  "States": {
+                    "quarantineIamRole": {
+                      "Type": "Task",
+                      "Resource": "${quarantineIamRoleFn.Arn}",
+                      "InputPath": "$",
+                      "ResultPath": "$",
+                      "OutputPath": "$",
                       "End": true,
                       "Retry": [
                         {
@@ -135,9 +186,17 @@ Resources:
                   }
                 }
               ]
-            }
+            },
+          "result":{
+            "InputPath": "$",
+            "ResultPath": "$",
+            "OutputPath": "$",
+            "Type": "Pass",
+            "End": true
+          }
           }
         }
+
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -156,13 +215,14 @@ Resources:
         - "arn:aws:iam::aws:policy/AWSLambdaExecute"
         - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
 
+
   LambdaExecutionRoleAddonPolicies: 
     Type: "AWS::IAM::Policy"
     Properties: 
         PolicyName: IncidentResponseInfoSecPolicy
         PolicyDocument: 
             Statement: 
-              - Sid: "SecurityGroupPolicy"
+              - Sid: "Ec2QurantinePermissions"
                 Effect: "Allow"
                 Action: 
                   - "ec2:RevokeSecurityGroupIngress"
@@ -182,6 +242,44 @@ Resources:
                 Resource: '*'
         Roles: 
           - Ref: "LambdaExecutionRole"
+
+
+  iamRoleQurantineExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+            - states.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSLambdaExecute"
+        - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
+
+
+  iamRoleQurantineExecutionRoleAddonPolicies: 
+    Type: "AWS::IAM::Policy"
+    Properties: 
+        PolicyName: IncidentResponseInfoSecQurantineRolePolicy
+        PolicyDocument: 
+            Statement: 
+              - Sid: "IamRoleQurantinePermissions"
+                Effect: "Allow"
+                Action: 
+                  - "iam:CreatePolicy"
+                  - "iam:GetPolicyVersion"
+                  - "iam:GetPolicy"
+                  - "iam:AttachRolePolicy"
+                  - "iam:CreatePolicyVersion"
+                Resource: '*'
+        Roles: 
+          - Ref: "iamRoleQurantineExecutionRole"
+
 
   StatesExecutionRole:
     Type: "AWS::IAM::Role"
@@ -204,8 +302,10 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource: 
-                  - Fn::GetAtt: [ ec2InstanceQuarantineFn, Arn ]
-                  - Fn::GetAtt: [ ec2InstanceSnapshotFn, Arn ]
+                  - Fn::GetAtt: [ qurantineEc2InstanceFn, Arn ]
+                  - Fn::GetAtt: [ quarantineEc2InstanceSnapshotFn, Arn ]
+                  - Fn::GetAtt: [ quarantineIamRoleFn, Arn ]
+
 
   CloudWatchEventRule:
     Type: "AWS::Events::Rule"
@@ -221,9 +321,10 @@ Resources:
       State: "ENABLED"
       Targets:
         -
-          Arn: !Ref incidentResponseStepFunction
+          Arn: !Ref incidentResponseStateMachine
           Id: trigger_qurantine_ops_target
           RoleArn: !GetAtt CwExecuteStateMachineRole.Arn
+
 
   CwExecuteStateMachineRole:
     Type: "AWS::IAM::Role"
@@ -250,7 +351,8 @@ Resources:
                   Effect: "Allow"
                   Action:
                     - "states:StartExecution"
-                  Resource: !Ref incidentResponseStepFunction
+                  Resource: !Ref incidentResponseStateMachine
+
 
   # Findings SNS Topic
   GuardDutySNSTopic:
@@ -261,6 +363,8 @@ Resources:
         -
           Endpoint: !Ref SecurityContactEmail
           Protocol: "email"
+
+
   GuardDutySNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
@@ -268,7 +372,7 @@ Resources:
         Id: ID-GD-Topic-Policy
         Version: '2012-10-17'
         Statement:
-        - Sid: SID-GD-Example
+        - Sid: GuardDutyNotifier
           Effect: Allow
           Principal:
             Service: events.amazonaws.com

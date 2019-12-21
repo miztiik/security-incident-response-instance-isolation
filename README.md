@@ -17,6 +17,7 @@
 
 - AWS CLI pre-configured - [Get help here](https://youtu.be/TPyyfmQte0U)
 - GuardDuty Enabled in the same region[Get help here](https://youtu.be/ybh_556IMpk)
+- EC2 Instance Running with an IAM Role
 
 1. ## Clone the repository
 
@@ -38,6 +39,7 @@
     STACK_NAME="${SERVICE_NAME}-001"
     OUTPUT_DIR="./outputs/"
     PACKAGED_OUTPUT_TEMPLATE="${OUTPUT_DIR}${STACK_NAME}-packaged-template.yaml"
+    SNS_EMAIL="abc@example.com"
     ```
 
 1. ## Deployment
@@ -49,50 +51,48 @@
     ./helper_scripts/deploy.sh
     ```
   
-1. ## Insert few Items
+1. Testing the Solution
 
-    Insert a simple item to the table, either from the GUI/CLI
-
-    ```json
-    ddb_name="dynamodb-table-cleanup-001-DynamoDBTable-15IKZNGW1NLET"
-    for i in {1..10}
-     do
-      val=${RANDOM}
-      aws dynamodb put-item \
-        --table-name "${ddb_name}" \
-        --item '{ "Username": {"S":"User_'${i}'"},"Timestamp": {"S":"'$(date +"%d/%m/%Y-%H:%M:%S")'"},"Message":{"S":"Mystique_Msg_'${val}'"} }'
-     done
-    ```
-
-1. Backup DDB Schema & Delete Table
+    - Connect to EC2 instance and execute the following command, Dont forget to update the `role_name` with the IAM Role attached to the EC2 instance.
 
     ```bash
-    yum -y install jq
-    aws dynamodb describe-table --table-name "${ddb_name}" | jq '.Table | del(.TableId, .TableArn, .ItemCount, .TableSizeBytes, .CreationDateTime, .TableStatus, .LatestStreamArn, .LatestStreamLabel, .ProvisionedThroughput.NumberOfDecreasesToday, .ProvisionedThroughput.LastIncreaseDateTime)' > schema.json
-
-    aws dynamodb delete-table --table-name "${ddb_name}"
+    role_name="s3_access"
+    curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${role_name}
     ```
 
-    At this moment, if you check the stack for drift, you will notice it had identified the table had been deleted.
-    ![dynamodb-streams-processor](images/drift-deleted.png)
-
-1. ReCreate Table & Verify Stack still owns the DDB
-
-    Using the schema of the old table, We should be able to create a new table with the same attributes. _If you have a hugh table, wait for couple of minutes and confirm table deletion before executing the below command for table creation._
+    - Open a local terminal,(not the EC2 instance).  
+    From the prevous output, replace the values for these, and run them,
+    _**Note**: Make sure the token does not have line breaks_
 
     ```bash
-    aws dynamodb create-table --cli-input-json file://schema.json
+    export AWS_ACCESS_KEY_ID="YOUR-ACCESS-KEY"
+    export AWS_SECRET_ACCESS_KEY="YOU-SECRET-KEY"
+    export AWS_SESSION_TOKEN="YOUR-TOKEN"
     ```
 
-    Under Cloudformation, We have a new `Detect Drift` option(_[More on this here](https://www.youtube.com/watch?v=YN4UOXSb74A)_). Initiate Drift Detection. You will find that the `Dynamo DB` resources had been tagged as modified but still under the managed of cloudformation stack.
+    - Lets check if we can query S3 with these new credentials,
 
-    ![dynamodb-streams-processor](images/drift-modified.png)
+    ```bash
+      aws sts get-caller-identity
+      aws s3 ls
+      unset AWS_ACCESS_KEY_ID
+      unset AWS_SECRET_ACCESS_KEY
+      unset AWS_SESSION_TOKEN
+      aws sts get-caller-identity
+      date
+      ```
+
+    _**Note**: Typically, it takes about ~20 to 30 minutes for GuardDuty to raise a finding. Within 5 Minutes of a finding, A CloudWatch Event is triggered._
+
 
 ### CleanUp
 
   If you want to destroy all the resources created by the stack, Execute the below command to delete the stack, or _you can delete the stack from console as well_
 
   ```bash
+  # Delete QURANTINE EBS Snapshots
+  # Delete QUARANTINE Security Group
+
   # Delete the CF Stack
   ./helper_scripts/deploy.sh nuke
   ```

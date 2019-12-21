@@ -4,14 +4,17 @@
   "States": {
     "ec2IncidentResponse": {
       "Type": "Parallel",
-      "End": true,
+      "Next":"result",
       "Branches": [
         {
-          "StartAt": "ec2InstanceSnapshot",
+          "StartAt": "quarantineEc2InstanceSnapshot",
           "States": {
-            "ec2InstanceSnapshot": {
+            "quarantineEc2InstanceSnapshot": {
               "Type": "Task",
-              "Resource": "${ec2InstanceSnapshotFn.Arn}",
+              "Resource": "${quarantineEc2InstanceSnapshotFn.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$",
+              "OutputPath": "$",
               "End": true,
               "Retry": [
                 {
@@ -27,11 +30,37 @@
           }
         },
         {
-          "StartAt": "ec2InstanceQuarantineFn",
+          "StartAt": "quarantineEc2Instance",
           "States": {
-            "ec2InstanceQuarantineFn": {
+            "quarantineEc2Instance": {
               "Type": "Task",
-              "Resource": "${ec2InstanceQuarantineFn.Arn}",
+              "Resource": "${qurantineEc2InstanceFn.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$",
+              "OutputPath": "$",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "quarantineIamRole",
+          "States": {
+            "quarantineIamRole": {
+              "Type": "Task",
+              "Resource": "${quarantineIamRoleFn.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$",
+              "OutputPath": "$",
               "End": true,
               "Retry": [
                 {
@@ -47,6 +76,13 @@
           }
         }
       ]
-    }
+    },
+  "result":{
+    "InputPath": "$",
+    "ResultPath": "$",
+    "OutputPath": "$",
+    "Type": "Pass",
+    "End": true
+  }
   }
 }
