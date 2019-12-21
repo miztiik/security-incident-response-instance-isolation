@@ -30,7 +30,6 @@ def set_global_vars():
     global_vars['Environment']              = "Prod"
     global_vars['region_name']              = "us-east-1"
     global_vars['qurantine_policy_name']    = f"quarantine_policy_{global_vars['Owner']}_Infosec"
-    global_vars['qurantine_role_name']      = f"quarantine_role_{global_vars['Owner']}_Infosec"
     global_vars['tag_name']                 = "quarantine_iam_role"
     global_vars['status']                   = True
     return global_vars
@@ -100,7 +99,7 @@ def add_qurantine_policy_to_role(role,policy_arn):
     """
     Attach qurantine policy to role
     """
-    resp = {'status': False}
+    resp = {'status': False, 'is_qurantined':False}
     # Create IAM client
     iam_client = boto3.client('iam')
     
@@ -110,9 +109,10 @@ def add_qurantine_policy_to_role(role,policy_arn):
             PolicyArn=policy_arn
         )
         logger.info(f"Deny policy attached to role:'{role}'")
+        resp['status'] = True
         resp['qurantine_role_status'] = {
             'role_name':role,
-            'qurantine_role':True,
+            'is_qurantined':True,
             'qurantine_policy':policy_arn
         }
     except ClientError as e:
@@ -150,5 +150,7 @@ def lambda_handler(event, context):
         logger.info(f"Unable to qurantine role")
         logger.info(f"ERROR:{str(e)}")
     return resp
+
+
 if __name__ == '__main__':
     lambda_handler(None, None)
