@@ -3,7 +3,7 @@
 
   Lets isolate that errant instances and dump it for analysis
   
-  ![AWS Security - Incident Response](images/ec2_credentials_exfiltration.png)
+  ![AWS Security - Incident Response](images/ec2_credentials_exfiltration_01.png)
 
   Follow this article in **[Youtube](https://youtu.be/a4gOXBrVe6w)**
 
