@@ -15,10 +15,10 @@ Parameters:
     Default: youremail@example.com
     Type: String
     AllowedPattern: ^(?:[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$
-  FunctionNameSuffix:
+  stackNameSuffix:
     Description: Suffix to append to the Lambda functions.
     Type: String
-    Default: -Miztiik-InfoSec
+    Default: Miztiik-InfoSec
 Globals:
   Function:
     Runtime: python3.7
@@ -30,7 +30,9 @@ Globals:
         DEBUG_MODE:
           Ref: enableDEBUGGER
     Tags:
-      Organisation: Miztiik-InfoSec
+      Organisation:
+        Ref: stackNameSuffix
+      Code: https://github.com/miztiik/security-incident-response-instance-isolation
 Resources:
   qurantineEc2InstanceFn:
     Type: AWS::Serverless::Function
@@ -38,10 +40,10 @@ Resources:
       Description: Attaches the instance a SG with no rules so it cannott communicate
         with the outside world
       FunctionName:
-        Fn::Sub: quarantine_ec2_instance_fn${FunctionNameSuffix}
+        Fn::Sub: quarantine_ec2_instance_fn_${stackNameSuffix}
       Handler: quarantine_ec2_instance.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/68e5eb35bc78f28f273d70bb57635a9a
+      CodeUri: s3://sam-templates-011/a71104e5929494e47de626e6e58c9bdc
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -57,10 +59,10 @@ Resources:
     Properties:
       Description: Takes a snapshot of the given instance ID
       FunctionName:
-        Fn::Sub: quarantine_ec2_instance_snapshot_fn${FunctionNameSuffix}
+        Fn::Sub: quarantine_ec2_instance_snapshot_fn_${stackNameSuffix}
       Handler: quarantine_ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/1027461c53693e626ab49806f9aebedd
+      CodeUri: s3://sam-templates-011/02b5045f7924f159fce4990f19237610
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -76,10 +78,10 @@ Resources:
     Properties:
       Description: Attaches a DENY ALL Permission to given IAM Role Name
       FunctionName:
-        Fn::Sub: quarantine_iam_role_fn${FunctionNameSuffix}
+        Fn::Sub: quarantine_iam_role_fn_${stackNameSuffix}
       Handler: quarantine_iam_role.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/e73f38fa50ddc2c2e80e12d50c2c4bb1
+      CodeUri: s3://sam-templates-011/434f3735ad2060c9df66696ed9f01f90
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -95,7 +97,7 @@ Resources:
     DependsOn: StatesExecutionRole
     Properties:
       StateMachineName:
-        Fn::Sub: incidentResponseStateMachine${FunctionNameSuffix}
+        Fn::Sub: incidentResponseStateMachine-${stackNameSuffix}
       RoleArn:
         Fn::GetAtt:
         - StatesExecutionRole
@@ -260,6 +262,16 @@ Resources:
           Fn::GetAtt:
           - CwExecuteStateMachineRole
           - Arn
+      - Arn:
+          Ref: GuardDutySNSTopic
+        Id: GuardDutySNSTopic-EC2-IAM
+        InputTransformer:
+          InputTemplate: '"GuardDuty Finding | ID:<gdid>: An EC2 instance IAM credentials
+            (Role: <userName>) may be compromised and should be investigated. Go to
+            https://console.aws.amazon.com/guardduty"'
+          InputPathsMap:
+            userName: $.detail.resource.accessKeyDetails.userName
+            gdid: $.detail.id
   CwExecuteStateMachineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -299,7 +311,7 @@ Resources:
         Id: ID-GD-Topic-Policy
         Version: '2012-10-17'
         Statement:
-        - Sid: SID-GD-Example
+        - Sid: GuardDutyNotifier
           Effect: Allow
           Principal:
             Service: events.amazonaws.com
@@ -308,3 +320,8 @@ Resources:
             Ref: GuardDutySNSTopic
       Topics:
       - Ref: GuardDutySNSTopic
+Outputs:
+  StateMachineArn:
+    Description: ARN for the Step Functions state machine
+    Value:
+      Ref: incidentResponseStateMachine

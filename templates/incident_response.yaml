@@ -35,8 +35,7 @@ Globals:
           Ref: enableDEBUGGER
     Tags:
       Organisation: !Ref stackNameSuffix
-      - Key: 'Code'
-        Value: 'https://github.com/miztiik/security-incident-response-instance-isolation'
+      Code: 'https://github.com/miztiik/security-incident-response-instance-isolation'
 
 Resources:
 
