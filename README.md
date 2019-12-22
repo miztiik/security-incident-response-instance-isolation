@@ -61,18 +61,18 @@
 
     - Connect to EC2 instance and execute the following command, Dont forget to update the `role_name` with the IAM Role attached to the EC2 instance. You will receive an access key
 
-        ```bash
-        role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-        session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)
-        AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
-        AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
-        AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
-        echo -e "###########-SECRETS-#############"
-        echo -e $AWS_ACCESS_KEY_ID
-        echo -e $AWS_SECRET_ACCESS_KEY
-        echo -e $AWS_SESSION_TOKEN
-        echo -e "###########-SECRETS-#############"
-        ```
+    ```bash
+    role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+    session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)
+    AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
+    AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
+    AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
+    echo -e "###########-SECRETS-#############"
+    echo -e $AWS_ACCESS_KEY_ID
+    echo -e $AWS_SECRET_ACCESS_KEY
+    echo -e $AWS_SESSION_TOKEN
+    echo -e "###########-SECRETS-#############"
+    ```
 
     Output looks like,
 
