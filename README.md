@@ -138,11 +138,14 @@
     1. Delete QURANTINE EBS Snapshots
     1. Delete QUARANTINE Security Group
     1. Delete QUARANTINE Deny all policy
-    1. Delete the stack,
+    1. Delete the stack[s],
 
     ```bash
     # Delete the CF Stack
     ./helper_scripts/deploy.sh nuke
+    aws cloudformation delete-stack \
+        --stack-name "compromised-instance" \
+        --region "${AWS_REGION}"
     ```
 
 ## Buy me a coffee
