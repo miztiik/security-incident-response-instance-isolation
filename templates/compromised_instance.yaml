@@ -127,11 +127,11 @@ Resources:
       GroupDescription: !Ref stackNameSuffix
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: icmp
-        FromPort: '-1'
-        ToPort: '-1'
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
         CidrIp: 0.0.0.0/0
-  
+
   
   # Compromised Instance IAM Role - For GuardDuty Finding: UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration
   CompromisedRole:
