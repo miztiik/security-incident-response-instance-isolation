@@ -199,6 +199,7 @@ Resources:
           !Sub |
             #!/bin/bash
             set -e
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
             sudo yum -y install jq
             role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
             session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)

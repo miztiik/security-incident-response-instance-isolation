@@ -395,4 +395,11 @@ Resources:
 Outputs:
   StateMachineArn:
     Description: ARN for the Step Functions state machine
-    Value: !Ref incidentResponseStateMachine
+    # Value: !Ref incidentResponseStateMachine
+    Value:
+      !Join
+        - ''
+        - - 'https://console.aws.amazon.com/states/home?region='
+          - !Ref "AWS::Region"
+          - '#/statemachines/view/'
+          - !Ref incidentResponseStateMachine

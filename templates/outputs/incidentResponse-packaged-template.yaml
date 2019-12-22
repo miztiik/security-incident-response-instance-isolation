@@ -43,7 +43,7 @@ Resources:
         Fn::Sub: quarantine_ec2_instance_fn_${stackNameSuffix}
       Handler: quarantine_ec2_instance.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/a71104e5929494e47de626e6e58c9bdc
+      CodeUri: s3://sam-templates-011/9bdc0c45483b21a0b300722ab82592e0
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -62,7 +62,7 @@ Resources:
         Fn::Sub: quarantine_ec2_instance_snapshot_fn_${stackNameSuffix}
       Handler: quarantine_ec2_instance_snapshot.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/02b5045f7924f159fce4990f19237610
+      CodeUri: s3://sam-templates-011/9d0e179d78dc7b6f29e0ad21f568f7d8
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -81,7 +81,7 @@ Resources:
         Fn::Sub: quarantine_iam_role_fn_${stackNameSuffix}
       Handler: quarantine_iam_role.lambda_handler
       Runtime: python3.7
-      CodeUri: s3://sam-templates-011/434f3735ad2060c9df66696ed9f01f90
+      CodeUri: s3://sam-templates-011/d8feef991c9bb6f98ef0febadcb46834
       Environment:
         Variables:
           ENABLE_DEBUG:
@@ -324,4 +324,9 @@ Outputs:
   StateMachineArn:
     Description: ARN for the Step Functions state machine
     Value:
-      Ref: incidentResponseStateMachine
+      Fn::Join:
+      - ''
+      - - https://console.aws.amazon.com/states/home?region=
+        - Ref: AWS::Region
+        - '#/statemachines/view/'
+        - Ref: incidentResponseStateMachine

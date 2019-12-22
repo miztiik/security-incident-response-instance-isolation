@@ -77,9 +77,15 @@
     Output looks like,
 
     ```bash
-    "AccessKeyId" : "AZIAUR7KWXJQNUIO4CW5",
-    "SecretAccessKey" : "f87Sp/3Fc7cpRGWwagzGSZuI1PWZZhIfp1r6I8FZ",
-    "Token" : "IQoJb3JpZ2luX.......SOMETHING....HERE..............TkDA=="
+    {
+        "Code" : "Success",
+        "LastUpdated" : "2019-12-22T16:42:46Z",
+        "Type" : "AWS-HMAC",
+        "AccessKeyId" : "ASOMEWXJQGSZO4CXB",
+        "SecretAccessKey" : "HRStonegkFUIfIQBcMYKon6CW9fcuk4/m3",
+        "Token" : "IQoJb3JpZ2luX.......SOMETHING....HERE..............TkDA==",
+        "Expiration" : "2019-12-22T23:17:44Z"
+    }
     ```
 
     - Open a local terminal,(not the EC2 instance).
