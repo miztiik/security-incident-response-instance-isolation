@@ -13,9 +13,6 @@
 
     - AWS CLI pre-configured - [Get help here](https://youtu.be/TPyyfmQte0U)
     - GuardDuty Enabled in the same region[Get help here](https://youtu.be/ybh_556IMpk)
-    - EC2 Instance Running with an IAM Role attached
-      - IAM Role - _i.e_ `s3_access` - _with managed permissions_ [Get Help for setting up IAM Role](https://www.youtube.com/watch?v=5g0Cuq-qKA0&list=PLxzKY3wu0_FLaF9Xzpyd9p4zRCikkD9lE&index=11)
-            - `AmazonS3ReadOnlyAccess` - To allow s3 access for ec2
 
 1. ## Clone the repository
 
@@ -53,12 +50,29 @@
   
 1. ## Test the Solution
 
-    - Connect to EC2 instance and execute the following command, Dont forget to update the `role_name` with the IAM Role attached to the EC2 instance. You will receive an access key
+    Let us deploy the EC2 instance with an IAM role, that will be simulated as a compromised instance,
 
     ```bash
-    role_name="s3_access"
-    curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${role_name}
+    aws cloudformation deploy \
+        --template-file ./templates/compromised_instance.yaml \
+        --stack-name "compromised-instance" \
+        --capabilities CAPABILITY_NAMED_IAM
     ```
+
+    - Connect to EC2 instance and execute the following command, Dont forget to update the `role_name` with the IAM Role attached to the EC2 instance. You will receive an access key
+
+        ```bash
+        role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+        session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)
+        AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
+        AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
+        AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
+        echo -e "###########-SECRETS-#############"
+        echo -e $AWS_ACCESS_KEY_ID
+        echo -e $AWS_SECRET_ACCESS_KEY
+        echo -e $AWS_SESSION_TOKEN
+        echo -e "###########-SECRETS-#############"
+        ```
 
     Output looks like,
 
@@ -81,14 +95,14 @@
     - Lets check if we can query S3 with these new credentials,
 
     ```bash
-      aws sts get-caller-identity
-      aws s3 ls
-      unset AWS_ACCESS_KEY_ID
-      unset AWS_SECRET_ACCESS_KEY
-      unset AWS_SESSION_TOKEN
-      aws sts get-caller-identity
-      date
-      ```
+    aws sts get-caller-identity
+    aws s3 ls
+    unset AWS_ACCESS_KEY_ID
+    unset AWS_SECRET_ACCESS_KEY
+    unset AWS_SESSION_TOKEN
+    aws sts get-caller-identity
+    date
+    ```
 
 1. ## Verify the Security Breach
 

@@ -2,7 +2,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
-Description: "Miztiik Incident Response Template"
+Description: "Miztiik Compromised Instance Template"
 
 Parameters:
 
@@ -195,13 +195,13 @@ Resources:
           Value: >-
             'https://github.com/miztiik/security-incident-response-instance-isolation'
       UserData:
-        Fn::Base64: !Sub
-          - |
+        Fn::Base64:
+          !Sub |
             #!/bin/bash
             set -e
             sudo yum -y install jq
             role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-            session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${role_name})
+            session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)
             AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
             AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
             AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
