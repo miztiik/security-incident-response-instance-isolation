@@ -1,0 +1,228 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: "Miztiik Incident Response Template"
+
+Parameters:
+
+  enableDEBUGGER:
+    Description: Do you want to enable logging.
+    Default: "False"
+    Type: String
+    AllowedValues: ["True", "False"]
+    ConstraintDescription: Must be boolean.
+
+
+  stackNameSuffix:
+    Description: 'Suffix to append to the Lambda functions.'
+    Type: 'String'
+    Default: 'Miztiik-InfoSec'
+
+  # Use public Systems Manager Parameter
+  # https://aws.amazon.com/blogs/compute/query-for-the-latest-amazon-linux-ami-ids-using-aws-systems-manager-parameter-store/
+  LatestAmznLnx2AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+
+  # VPC & EC2 Creation
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Ref stackNameSuffix
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Ref stackNameSuffix
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId: !Ref VPC
+  RouteTable:
+    DependsOn:
+      - VPC
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref stackNameSuffix
+      VpcId: !Ref VPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/26
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref stackNameSuffix
+      VpcId: !Ref VPC
+  SubnetAssoc:
+    DependsOn:
+      - Subnet
+      - RouteTable
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet
+  PublicNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: Name
+          Value: !Ref stackNameSuffix
+        -
+          Key: Network
+          Value: Public
+  InboundPublicNACLEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNACL
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+      PortRange:
+        From: 0
+        To: 65535
+  OutboundPublicNACLEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNACL
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 0
+        To: 65535
+  SubnetNACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref Subnet
+      NetworkAclId: !Ref PublicNACL
+  TargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Ref stackNameSuffix
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: icmp
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+  
+  
+  # Compromised Instance IAM Role - For GuardDuty Finding: UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration
+  CompromisedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Join:
+        - '-'
+        - [!Ref stackNameSuffix, 'EC2', 'Compromised']
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+        - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+
+  CompromisedInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName:
+        Fn::Join:
+        - '-'
+        - [!Ref stackNameSuffix, 'Compromised','Profile']
+      Path: /
+      Roles:
+        - !Ref CompromisedRole
+
+
+  # Compromised Instance - For GuardDuty Finding: UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration
+  CompromisedInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      IamInstanceProfile: !Ref CompromisedInstanceProfile
+      ImageId: !Ref LatestAmznLnx2AmiId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref TargetSecurityGroup
+          SubnetId:
+            Ref: Subnet
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Join:
+              - ': '
+              - [!Ref stackNameSuffix, 'Compromised Instance', 'CredentialExfiltration']
+        - Key: GD-Finding
+          Value: 'UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration'
+        - Key:
+            !Ref stackNameSuffix
+          Value: >-
+            'https://github.com/miztiik/security-incident-response-instance-isolation'
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            set -e
+            sudo yum -y install jq
+            role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+            session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${role_name})
+            AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
+            AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
+            AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
+            echo -e "###########-SECRETS-#############"
+            echo -e $AWS_ACCESS_KEY_ID
+            echo -e $AWS_SECRET_ACCESS_KEY
+            echo -e $AWS_SESSION_TOKEN
+            echo -e "###########-SECRETS-#############"
+
+
+Outputs:
+  CompromisedInstanceIp:
+    Description: Compromised Instance IP
+    Value:
+      Fn::GetAtt:
+      - CompromisedInstance
+      - PublicIp
+
+  CompromisedRoleArn:
+    Description: Compromised IAM Role Arn
+    Value:
+      Fn::GetAtt:
+      - CompromisedRole
+      - Arn

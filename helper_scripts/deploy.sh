@@ -11,8 +11,9 @@ SERVICE_NAME="Miztiik-Incident-Response"
 TEMPLATE_NAME="incident_response.yaml" # The CF Template should be the same name, If not update it.
 # STACK_NAME="${SERVICE_NAME}"
 STACK_NAME="incidentResponse"
+TEMPLATE_DIR="./templates"
 OUTPUT_DIR="./outputs"
-PACKAGED_OUTPUT_TEMPLATE="${OUTPUT_DIR}/${STACK_NAME}-packaged-template.yaml"
+PACKAGED_OUTPUT_TEMPLATE="${TEMPLATE_DIR}/${OUTPUT_DIR}/${STACK_NAME}-packaged-template.yaml"
 
 # You can also change these parameters but it's not required
 info_sec_ops_mail="youremail@gmail.com"
@@ -21,9 +22,9 @@ info_sec_ops_mail="youremail@gmail.com"
 
 
 function build_env(){
-    echo -e "\n ******************************"
+    echo -e "\n *******************************"
     echo -e " * Environment Build Initiated *"
-    echo -e " ******************************"
+    echo -e " *******************************"
 
 }
 
@@ -46,7 +47,7 @@ function pack() {
     echo -e " *****************************"
     
     aws cloudformation package \
-        --template-file "${TEMPLATE_NAME}" \
+        --template-file "${TEMPLATE_DIR}/${TEMPLATE_NAME}" \
         --s3-bucket "${BUCKET_NAME}" \
         --output-template-file "${PACKAGED_OUTPUT_TEMPLATE}"
     
@@ -88,7 +89,13 @@ function nuke_stack() {
     echo -e "\n ******************************"
     echo -e " *  Stack Deletion Initiated  *"
     echo -e " ******************************"
-    aws cloudformation delete-stack --stack-name "${STACK_NAME}" --region "${AWS_REGION}"
+    aws cloudformation delete-stack \
+        --stack-name "${STACK_NAME}" \
+        --region "${AWS_REGION}"
+
+    aws cloudformation wait stack-delete-complete  \
+        --stack-name "${STACK_NAME}" \
+        --region "${AWS_REGION}"
     exit
 	}
 
