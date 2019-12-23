@@ -14,6 +14,8 @@
     - AWS CLI pre-configured - [Get help here](https://youtu.be/TPyyfmQte0U)
     - GuardDuty Enabled in the same region - [Get help here](https://youtu.be/ybh_556IMpk)
 
+    _**Note**: Make sure the region is same for AWS CLI and GuardDuty, We will use the same region to deploy our stacks._
+
 1. ## Clone the repository
 
     Lets clone the repo locally to customize it to suit your needs.
@@ -26,6 +28,8 @@
 1. ## Customize the deployment
 
     Edit the `./helper_scripts/deploy.sh` to update your environment variables.
+
+    _**Note**: Use the same region you have configured your AWS CLI and GuardDuty for your `AWS_REGION`_
   
     ```bash
     AWS_PROFILE="default"
@@ -70,10 +74,7 @@
     AWS_SECRET_ACCESS_KEY="$(echo $session | jq -r .SecretAccessKey)"
     AWS_SESSION_TOKEN="$(echo $session | jq -r .Token)"
     echo -e "###########-SECRETS-#############"
-    echo -e $AWS_ACCESS_KEY_ID
-    echo -e $AWS_SECRET_ACCESS_KEY
-    echo -e $AWS_SESSION_TOKEN
-    echo -e "###########-SECRETS-#############"
+    echo -e $session
     ```
 
     Output looks like,
