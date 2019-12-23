@@ -63,6 +63,7 @@
     - Connect to EC2 instance and execute the following command. You will receive an access key, secret key and token.
 
     ```bash
+    sudo yum -y install jq
     role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
     session=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/$role_name)
     AWS_ACCESS_KEY_ID="$(echo $session | jq -r .AccessKeyId)"
