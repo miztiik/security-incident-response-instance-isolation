@@ -1,7 +1,7 @@
 
-# AWS Security - Incident Response
+# AWS Security - Incident Response: Automatically Qurantine Compromised EC2 Instance
 
-  Lets isolate that errant instances and dump it for analysis
+  Lets isolate that errant instance[s], IAM Roles and dump it for analysis using AWS GuardDuty, AWS EventBridge and StepFunctions
   
   ![AWS Security - Incident Response](images/ec2_credentials_exfiltration_01.png)
 
@@ -12,7 +12,7 @@
     This demo, instructions, scripts and cloudformation template is designed to be run in `us-east-1`. With few modifications you can try it out in other regions as well(_Not covered here_).
 
     - AWS CLI pre-configured - [Get help here](https://youtu.be/TPyyfmQte0U)
-    - GuardDuty Enabled in the same region[Get help here](https://youtu.be/ybh_556IMpk)
+    - GuardDuty Enabled in the same region - [Get help here](https://youtu.be/ybh_556IMpk)
 
 1. ## Clone the repository
 
@@ -34,8 +34,9 @@
     SERVICE_NAME="Miztiik-Incident-Response"
     TEMPLATE_NAME="incident_response.yaml" # The CF Template should be the same name, If not update it.
     STACK_NAME="incidentResponse"
-    OUTPUT_DIR="./outputs/"
-    PACKAGED_OUTPUT_TEMPLATE="${OUTPUT_DIR}${STACK_NAME}-packaged-template.yaml"
+    TEMPLATE_DIR="./templates"
+    OUTPUT_DIR="./outputs"
+    PACKAGED_OUTPUT_TEMPLATE="${TEMPLATE_DIR}/${OUTPUT_DIR}/${STACK_NAME}-packaged-template.yaml"
     info_sec_ops_mail="youremail@gmail.com"
     ```
 
@@ -50,7 +51,7 @@
   
 1. ## Test the Solution
 
-    Let us deploy the EC2 instance with an IAM role, that will be simulated as a compromised instance,
+    Let us deploy the EC2 instance with an IAM role, that will be simulated as a compromised instance, If we use EC2 instance role credentials outside of it, this should trigger an GuardDuty finding.
 
     ```bash
     aws cloudformation deploy \
@@ -59,7 +60,7 @@
         --capabilities CAPABILITY_NAMED_IAM
     ```
 
-    - Connect to EC2 instance and execute the following command, Dont forget to update the `role_name` with the IAM Role attached to the EC2 instance. You will receive an access key
+    - Connect to EC2 instance and execute the following command. You will receive an access key, secret key and token.
 
     ```bash
     role_name=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
@@ -88,7 +89,7 @@
     }
     ```
 
-    - Open a local terminal,(not the EC2 instance).
+    - Open a local terminal,(Maybe another EC2 instance).
     From the prevous output, replace the values for these, and run them,
     _**Note**: Make sure the token does not have line breaks_
 
@@ -112,9 +113,9 @@
 
 1. ## Verify the Security Breach
 
-    - Check the `GuardDuty` service page for any new findings.
+    _**Note**: Typically, it takes about ~20 to 30 minutes for GuardDuty to raise a finding. Within 5 Minutes of a finding, A CloudWatch Event is triggered._
 
-      _**Note**: Typically, it takes about ~20 to 30 minutes for GuardDuty to raise a finding. Within 5 Minutes of a finding, A CloudWatch Event is triggered._
+    - Check the `GuardDuty` service page for any new findings.
 
     - Check the StateMachine Execution
 
