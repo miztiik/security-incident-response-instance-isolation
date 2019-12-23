@@ -19,7 +19,7 @@
     Lets clone the repo locally to customize it to suit your needs.
 
     ```bash
-    git clone git@github.com:miztiik/security-incident-response-instance-isolation.git
+    git clone https://github.com/miztiik/security-incident-response-instance-isolation.git
     cd security-incident-response-instance-isolation
     ```
 
