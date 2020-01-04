@@ -1,11 +1,11 @@
 
-# AWS Security - Incident Response: Automatically Qurantine Compromised EC2 Instance
+# AWS Security👮 - Incident Response: Automatically Quarantine Compromised EC2 Instance
 
-  Lets isolate that errant instance[s], IAM Roles and dump it for analysis using AWS GuardDuty, AWS EventBridge and StepFunctions
+  Lets isolate that errant instance[s], IAM Roles and dump it for analysis using `AWS GuardDuty`, `AWS EventBridge` and `StepFunctions`
   
   ![AWS Security - Incident Response](images/ec2_credentials_exfiltration_01.png)
 
-  Follow this article in **[Youtube](https://youtu.be/a4gOXBrVe6w)**
+  Follow this article in **[Youtube](https://www.youtube.com/c/ValaxyTechnologies)**
 
 1. ## Prerequisites
 
@@ -153,7 +153,7 @@
 
 ## Buy me a coffee
 
-Buy me a coffee ☕ here `https://paypal.me/valaxy`, _or_ You can reach out to get more details through [here](https://youtube.com/c/valaxytechnologies/about).
+Buy me a coffee ☕ through [Paypal](https://paypal.me/valaxy), _or_ You can reach out to get more details through [here](https://youtube.com/c/valaxytechnologies/about).
 
 ### References
 
