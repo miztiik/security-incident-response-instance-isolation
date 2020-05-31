@@ -1,13 +1,13 @@
 
-# AWS Security👮 - Incident Response: Automatically Quarantine Compromised EC2 Instance
+# 👮 AWS Security - Incident Response: Automatically Quarantine Compromised EC2 Instance
 
   Lets isolate that errant instance[s], IAM Roles and dump it for analysis using `AWS GuardDuty`, `AWS EventBridge` and `StepFunctions`
   
   ![AWS Security - Incident Response](images/ec2_credentials_exfiltration_01.png)
 
-  Follow this article in **[Youtube](https://www.youtube.com/c/ValaxyTechnologies)**
+  Follow this article in **[Udemy][101]**
 
-1. ## Prerequisites
+1. ## 🧰 Prerequisites
 
     This demo, instructions, scripts and cloudformation template is designed to be run in `us-east-1`. With few modifications you can try it out in other regions as well(_Not covered here_).
 
@@ -44,7 +44,7 @@
     info_sec_ops_mail="youremail@gmail.com"
     ```
 
-1. ## Deployment
+1. ## 🚀 Deployment
 
     We will use the `deploy.sh` in the `helper_scripts` directory to deploy our [AWS SAM](https://github.com/awslabs/serverless-application-model) template
 
@@ -53,7 +53,7 @@
     ./helper_scripts/deploy.sh
     ```
   
-1. ## Test the Solution
+1. ## 🔬 Testing the solution
 
     Let us deploy the EC2 instance with an IAM role, that will be simulated as a compromised instance, If we use EC2 instance role credentials outside of it, this should trigger an GuardDuty finding.
 
@@ -133,12 +133,12 @@
 
     There are SNS notification resources, pre-baked in this solution. Go ahead and finish the configuration so you can get notified about findings.
 
-1. ## CleanUp
+1. ## 🧹 CleanUp
 
     If you want to destroy all the resources created by the stack, Execute the below command to delete the stack, or _you can delete the stack from console as well_
 
     1. Disable/Suspend GuardDuty as required
-    1. Delete QURANTINE EBS Snapshots
+    1. Delete QUARANTINE EBS Snapshots
     1. Delete QUARANTINE Security Group
     1. Delete QUARANTINE Deny all policy
     1. Delete the stack[s],
@@ -151,16 +151,44 @@
         --region "${AWS_REGION}"
     ```
 
-## Buy me a coffee
+## 📌 Who is using this
 
-Buy me a coffee ☕ through [Paypal](https://paypal.me/valaxy), _or_ You can reach out to get more details through [here](https://youtube.com/c/valaxytechnologies/about).
+This Udemy [course][101] uses this repository extensively to teach advanced AWS Cloud Security to new developers, Solution Architects & Ops Engineers in AWS.
 
-### References
+### 💡 Help/Suggestions or 🐛 Bugs
 
-1. [Amazon GuardDuty findings](https://docs.aws.amazon.com/guardduty/latest/ug//get-findings.html#get-findings-response-syntax)
-1. [CloudWatch Events Event Examples From Supported Services](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html)
-1. [Configure a CloudWatch events rule for GuardDuty](https://aws.amazon.com/premiumsupport/knowledge-center/guardduty-cloudwatch-sns-rule/)
+Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional documentation or solutions, we greatly value feedback and contributions from our community. [Start here][200]
 
-### Metadata
+### 👋 Buy me a coffee
+
+Buy me a [coffee ☕][900].
+
+### 📚 References
+
+1. [Amazon GuardDuty findings][1]
+1. [CloudWatch Events Event Examples From Supported Services][2]
+1. [Configure a CloudWatch events rule for GuardDuty][3]
+
+### 🏷️ Metadata
 
 **Level**: 400
+
+[1]: https://docs.aws.amazon.com/guardduty/latest/ug//get-findings.html#get-findings-response-syntax
+
+[2]: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html
+
+[3]: https://aws.amazon.com/premiumsupport/knowledge-center/guardduty-cloudwatch-sns-rule/
+
+[100]: https://www.udemy.com/course/aws-cloud-security/?referralCode=B7F1B6C78B45ADAF77A9
+
+[101]: https://www.udemy.com/course/aws-cloud-security-proactive-way/?referralCode=71DC542AD4481309A441
+
+[102]: https://www.udemy.com/course/aws-cloud-development-kit-from-beginner-to-professional/?referralCode=E15D7FB64E417C547579
+
+[103]: https://www.udemy.com/course/aws-cloudformation-basics?referralCode=93AD3B1530BC871093D6
+
+[200]: https://github.com/miztiik/security-automation-remediate-unintended-iam-access/issues
+
+[899]: https://www.udemy.com/user/n-kumar/
+
+[900]: https://ko-fi.com/miztiik

@@ -393,6 +393,10 @@ Resources:
 
 
 Outputs:
+  LearnCDK:
+    Description: 'Stop Writing Cloudformation.Infrastructure Is Code:Learn CDK'
+    Value: 'https://www.udemy.com/course/aws-cloud-development-kit-from-beginner-to-professional/?referralCode=E15D7FB64E417C547579'
+
   StateMachineArn:
     Description: ARN for the Step Functions state machine
     # Value: !Ref incidentResponseStateMachine
